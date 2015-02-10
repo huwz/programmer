@@ -275,6 +275,135 @@ Appache 阿帕奇
        Require all denied
    </FilesMatch>
 
-  以上指令可以阻止访问许多类型的图片文件
+  .. note:: 
+   ``(?option pattern)`` is equivalent to ``pattern/option``;
+   ``(?i:gif|je?g|png)$`` alternative: ``(?:gif|je?g|png)$/i`` indicates that the pattern matching is insensitive
+
+  以上指令可以阻止访问许多类型的图片文件。
+
+  正则表达式如果包含命名的分组和后向引用，则可以通过大写的组名添加到应用环境；
+  允许模块如 ``mod_write`` 引用正则表达式中的文件路径和 URLs。
+
+  如：
+
+  .. code-block:: html
+
+   <DirectoryMatch ^/var/www/combined/(?<SITENAME>[^/]+)>
+       require ldap-group cn=%{env:MATCH_SITENAME},ou=combined,o=Example
+   </DirectoryMatch>
+
+* 布尔表达式
+   
+  ``<If>`` 指令修改配置信息，取决于布尔表达式的值。
+  例如，如下配置的作用是，如果 ``HTTP Referer`` 不是以 ``http://www.example.com`` 开头，
+  则拒绝访问。
+
+  .. code-block:: html
+
+   <If "!(%{HTTP_REFERER} -strmatch 'http://www.example.com/*')">
+        Require all denied
+   </If>
+
+使用场合
+--------
+
+选择文件系统容器还是网站空间容器，很简单。
+如果指令应用于文件系统中的对象，则使用 ``<Directory>`` 或者 ``<Files>``；
+如果指令应用的对象不在文件系统中（如由数据库产生的网页），则使用 ``<Location>``。
+
+如果限制访问文件系统中的对象，一定不能用 ``<Loaction>``。
+因为许多不同的网站空间（URL）可能映射到同一个文件系统位置，
+导致限制被绕过。
+例如：
+
+.. code-block:: html
+
+ <Loaction /dir/>
+     Require all denied
+ </Location>
+
+如果请求是 ``http://yoursite.example.com/dir/``，该配置正常工作。
+但如果是一个大小写不敏感的文件系统呢？
+你的限制将会被 ``http://yoursite.example.com/dir/`` 轻易绕开。
+相反， ``<Directory>`` 指令，会应用到该位置处的任意文件，无论它是怎么调用的。
+（只有文件系统链接是例外。
+通过符号链接，相同目录可以放到文件系统的多个位置。
+``<Directory>`` 会跟随符号链接，并不会更新路径名。
+所以，在最高级别的安全设置下，符号链接应该被 ``<Options>`` 指令禁止。）
+
+如果你会想，这些都不会对你产生映像，因为你使用的是一个大小写敏感的文件系统。
+但记住并不只有一种方式将网站空间映射到文件系统的同一个位置。
+所以还是推荐大家总是使用文件系统容器。
+也有例外，限定配置放在 ``<Loaction>`` 中更安全，因为该节点应用于所有请求，而不是某个特定的 URLs。
+
+节点嵌套
+--------
+  
+一些节点类型可以在其他节点类型中嵌套使用：
+
+* ``<Files>`` 可以在 ``<Directory>`` 中使用；
+* ``<If>`` 可以在 ``<Directory>``， ``<Location>`` 和 ``<Files>`` 中使用。
+* 正则副本也遵循上述规则
+
+虚拟主机
+--------
+
+``<VirtualHost>`` 容器包含的指令应用于特地的主机。
+这个指令对于在同一台机器上有多个主机，每个主机的配置信息不同。
+
+代理
+----
+
+``<Proxy>`` 和 ``<ProxyMatch>`` 只应用于指定 URL 的 ``mod_proxy`` 代理服务器。
+如：
+
+.. code-block:: html
+
+ <Proxy http://www.example.com/*>
+     Require all granted
+ </Proxy>
+
+这些配置将阻止代理服务器访问 www.example.com 网站。  
+
+指令限制
+--------
+
+对于不同类型的容器，哪些指令是允许的呢？
+
+记住：凡是 ``<Directory>`` 中允许的指令都可以使用在 ``<DirectoryMatch>``， ``Files>``， ``<FilesMatch>``， ``<Location>``， ``<LocationMatch>``， ``<Proxy>`` 以及 ``<ProxyMatch>`` 中。
+也有特例：
+
+* ``<AllowOverride>`` 中的指令只能工作在 ``<Directory>``
+* ``FollowSymLinks`` 和 ``SymLinksIfOwnerMatch`` 选项（``Options``）只能用在 ``<Directory>`` 或者 ``htaccess`` 文件中。
+* ``Options`` 指令不能用在 ``<Files>`` 和 ``<FilesMatch>`` 中。
+
+节点合并
+--------
+
+配置节点的应用顺序很独特。
+由于这对配置指令的解析方法产生重大影响，因而有必要知道它的工作方式。
+
+合并的顺序如下：
+
+* ``<Directory>`` （除正则表达式）和 ``.htaccess`` 同时执行（如果可以的话，``.htaccess`` 覆盖 ``<Directory>``）
+* ``<DirectoryMatch>`` (``<Directory ~>``)
+* ``<Files>`` 和 ``<FilesMatch>`` 同时执行
+* ``<Location>`` 和 ``<LocationMatch>`` 同时执行
+* ``<If>``
+  
+除了 ``<Directory>`` 之外，每个组按照出现在配置文件中的位置处理。
+``<Directory>`` （第一组）按照目录最短到最长的顺序处理。
+如：``<Directory /var/web/dir>`` 将在 ``<Directory /var/wev/dir/subdir>`` 之前处理。
+如果有多个 ``<Directory>`` 节点应用到用一个目录，则按照出现顺序处理。
+通过 ``Include`` 指令包含的配置文件会被加载到指令位置。
+
+在所有外部节点应用之后，``<VirtualHost>`` 内部节点开始应用。
+该节点允许虚拟主机修改主服务器的配置。
+
+如果请求由 ``mod_proxy`` 受理，则 ``<Proxy>`` 将取代 ``<Directory>`` 第一个应用。
+
+后应用的节点可以改写先应用的节点，然而每个模块负责解析改写的采取的方式。
+后应用的节点可能需要对某些指令进行“概念”合并。
 
 .. [1] (`Uniform Resource Locators`) 
+
