@@ -12,6 +12,10 @@ Apache
    :maxdepth: 2
 
    newer_to_apache
+   configures
+   main_server_configuration
    server_side_includes
    appache_directives
    mod_include
+   mod_mime
+   mod_negotiation
