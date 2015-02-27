@@ -15,3 +15,4 @@ Apache
    server_side_includes
    appache_directives
    mod_include
+   content_negotiation
