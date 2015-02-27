@@ -19,3 +19,4 @@ Apache
    mod_include
    mod_mime
    mod_negotiation
+   content_negotiation
