@@ -156,7 +156,7 @@ qs 参数表明和其他的变体相比，该变体的相关 **质量**，它和
 +------------+-----------------+---------------------+------------+
 | dimension  | field           | value               | parameters |
 +============+=================+=====================+============+
-| Media Type | Accept          | MIME type           | q |
+| Media Type | Accept          | MIME type           | q          |
 +------------+-----------------+---------------------+------------+
 | Language   | Accept-Language | en, fr, zh-cn, etc. | q          |
 +------------+-----------------+---------------------+------------+
@@ -194,6 +194,45 @@ qs 参数表明和其他的变体相比，该变体的相关 **质量**，它和
 1. 检查每个维度的 ``Accept*`` 字段（如 ``Accept-Language``），给每个变体分配一个质量值。
    如果 ``Accept*`` 中的参数指示该变体不可用，则排除。
    如果所有变体都被排除，则进入第 4 阶段；
+
+   请求头：
+
+   ``Accept: text/html;q=0.8, image/gif; q=0.7, image/jpeg; q=0.5, application/json; q=0, */*; q=0.01``
+
+   hobbit.var：
+
+   .. code-block:: html
+
+    URI: hobbit
+
+    URI: hobbit.html
+    Content-Type: html/text; qs=0.4
+
+    URI: hobbit.gif
+    Content-Type: image/gif; qs=0.4
+
+    URI: hobbit.jpeg
+    Content-Type: image/jpeg; qs=0.5
+
+    URI: hobbit.bin
+    Content-Type: application/json; qs=0.1
+
+   先将 ``Accept`` 中的 q 值依照媒体类型分给每个变体。
+
+   +-------------+-----+-----+
+   | URI         | q   | qs  |
+   +=============+=====+=====+
+   | hobbit.html | 0.8 | 0.4 |
+   +-------------+-----+-----+
+   | hobbit.gif  | 0.7 | 0.4 |
+   +-------------+-----+-----+
+   | hobbit.jpeg | 0.5 | 0.5 |
+   +-------------+-----+-----+
+   | hobbit.bin  | 0   | 0.1 |
+   +-------------+-----+-----+
+
+   排除 hobbit.bin，因为该变体不可用
+
 2. 依次执行以下步骤，通过一步步排除选择最佳变体。
    
    任何变体，只要在某一步中没有被选中，则排除。

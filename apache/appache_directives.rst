@@ -104,7 +104,7 @@ Appache 指令
 将 ``.shtml`` 文件中的 ``SSI`` 指令进行处理，再用 ``mod_deflate`` 做压缩。
 
 ``MultiViewsMatch``
-------------------
+-------------------
 
 使用多视图格式匹配一个文件，加载文件的类型。
 语法：``MultiViewsMatch Any|NegotiationOnly|Filters|handlers [handlers|Filters]
