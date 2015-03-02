@@ -77,6 +77,8 @@ Appache 阿帕奇
 
 配置指令(directive)可以应用于整个服务器，也可以应用于某个特定的目录，文件，主机或者 URL。
 
+.. note:: 相对路径/目录以 ``/`` 开始，绝对路径/目录需要加上双引号
+
 * 配置节点类型
   
   配置节点包括：``<Directory>`` ``<DirectoryMatch>`` ``<Files>`` ``<FilesMatch>`` ``<If>`` 
