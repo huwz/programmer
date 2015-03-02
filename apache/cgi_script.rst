@@ -6,6 +6,21 @@ cgi 脚本
 cgi 脚本就是简单的文本文件，可以用任何文本编辑器编写。
 对于 Windows 操作系统，可以用文本文档或者 ``Notepad``。
 
+原理
+----
+
+服务器和脚本的通信是过标准输入输出缓冲区进行的。
+
+* 服务器接收到客户端请求后，将参数放入标准输入缓冲区；
+* 脚本通过输入缓冲区获取用户请求参数；
+* 脚本处理完之后将所有信息输出到标准输出缓冲区，服务器从中获取响应头和响应体
+  
+脚本输出的信息分为三类：
+
+* 正常输出响应头，如 ``Content-Type``
+* 正常输出响应数据，可以是任意类型。
+* 错误输出响应头，为 ``Status``
+
 编写 cgi 脚本没有固定的脚本语言，只要满足 cgi 脚本相关格式即可。
 你可以用 Python，也可以用 Perl，还可以用批处理脚本，根据个人情况而定。
 
@@ -40,7 +55,7 @@ HTTP 头是一些简单的文本行，放在服务器响应体前面发送给浏
 
 .. code-block:: python
  
- print 'Content-Type: text/html\n\n'
+ print 'Content-Type: text/html\n'
 
 以上示例指定响应体以 HTML 文本格式展示。
 需要注意的是，``Content-Type`` 行之后需要有一个空行。
@@ -66,10 +81,49 @@ HTTP 头是一些简单的文本行，放在服务器响应体前面发送给浏
 
  #!C:/Python27/python.exe
 
- print 'Content-Type: text/html\n\n'
+ print 'Content-Type: text/html\n'
  print '<html>'
  print '<body>Hello,world</body>'
  print '</html>'
+
+如果是其他的内容呢，比如图片，二进制数据等，怎么办？
+
+传递参数
+--------
+
+前面介绍了 cgi 脚本的一个简单例子。
+现在有个问题，如何通过 url 传递参数给 cgi 脚本呢？
+可以使用 ``?`` 和 ``+``。
+
+例如：
+
+``http://<servername>/login.py?hob+123456``
+
+服务器收到请求后，将参数 ``hob``，``123456`` 传递给脚本。
+传递方式和命令行传递参数一样。
+
+Python 脚本可以通过 ``os.argv`` 获取参数。
+Perl 脚本通过 ``${n}`` (n=1,2,3,...) 获取参数。 
+
+返回服务器文件
+--------------
+
+将一个已经存在的文件发回客户端，
+例如：``hello_world.html`` 和 cgi 同目录。
+可以在 cgi 脚本中写：
+
+.. code-block:: python
+ 
+ print 'Location: hello_world.html' # 相对路径或者访问 hello_world.html 的 url
+
+返回错误响应
+------------
+
+``print 'Status: <statusCode> <message>\n'``
+
+.. note:: 后面跟一个空行
+
+e.g: ``print 'status: 204 No Response\n``
 
 服务器配置
 ----------
