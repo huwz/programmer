@@ -29,7 +29,7 @@ cgi 脚本就是简单的文本文件，可以用任何文本编辑器编写。
 脚本解析器路径
 --------------
 
-任何脚本都要通过特定的脚本解析器执行，Python cgi 脚本也不例外。
+任何脚本都要通过特定的脚本解析器执行，Python 脚本也不例外。
 Python 脚本通过 ``python.exe`` 解释执行，所以脚本第一行需要给出解析器路径：
 
 .. code-block:: python
@@ -42,14 +42,19 @@ Python 脚本通过 ``python.exe`` 解释执行，所以脚本第一行需要给
 
 .. note:: Perl 脚本也一样：``#!/usr/bin/perl``
 
-``Content-Type`` 头
--------------------
+实际上服务器就是通过第一行构造 shell 命令行，执行脚本的。
+所以可以在第一行加上一些解析器选项参数。
+例如：
 
-在展示网页给客户端之前，需要告诉客户端网页的媒体类型。
-使用 ``Content-Type`` 头即可。
+``#!C:/Python/Python27/python.exe -s -t``
+
+服务器执行 cgi.py 脚本时，执行命令行 ``C:/Python/Python27/python.exe -s -t cgi.py``。
+
+HTTP 响应头
+-----------
 
 HTTP 头是一些简单的文本行，放在服务器响应体前面发送给浏览器。
-浏览器不会显示这些头信息，会依据头信息决定如何解析响应体，如何展示。
+浏览器不会显示这些头信息，会依据头信息决定如何解析响应内容并展示。
 
 ``Content-Type`` 头一般是 cgi 脚本输出的第一项内容，例如：
 
@@ -57,13 +62,15 @@ HTTP 头是一些简单的文本行，放在服务器响应体前面发送给浏
  
  print 'Content-Type: text/html\n'
 
-以上示例指定响应体以 HTML 文本格式展示。
-需要注意的是，``Content-Type`` 行之后需要有一个空行。
+以上示例指定响应内容以 HTML 文本格式展示。
+
+此外，还可以有其他 HTTP 头，如：``Content-Language`` 和 ``Content-Length`` 等。
+需要注意的是，HTTP 头信息之后需要有一个空行，之后才可以添加响应正文。
 
 打印网页内容
 ------------
 
-对于 ``text/html`` 响应，只要将响应内容依据 HTML 格式打印即可。
+对于媒体类型为 ``text/html`` 响应，只要将响应内容依据 HTML 格式打印到标准输出区即可。
 例如：
 
 .. code-block:: python
@@ -86,7 +93,38 @@ HTTP 头是一些简单的文本行，放在服务器响应体前面发送给浏
  print '<body>Hello,world</body>'
  print '</html>'
 
-如果是其他的内容呢，比如图片，二进制数据等，怎么办？
+对于其他媒体类型，比如图片 (``image/*``)，二进制数据(``application/octet-stream``)等，做法是一样的。
+
+举个例子，现在需要将 `/cgi-bin/`` 目录下的图片 ``beauty.png`` 发给客户端。
+脚本可以这样写：
+
+.. code-block:: python
+
+ #!C:/Python27/python.exe -u
+ # script_name: show_image.py
+
+ print 'Content-Type: image/png\n'
+
+ print file('beauty.png', 'rb').read()
+
+在浏览器上运行 ``http://<servername>/cgi-bin/show_image.py`` 即可显示该图片了。
+
+这里注意几个问题：
+
+* 在指定 ``python.exe`` 的路径时，加上了 ``-u`` 选项，表示不缓存二进制的标准输出流和错误流，直接发送给客户端。
+  缓存的话，可能因转码的问题导致丢失数据，引起图片失真。
+* 在读取文件的时候注意指明为 ``rb``，采用二进制的方式读取。
+
+另外为了保险起见，最好使用 ``shutil.copyfileobj()`` 代替 file.read()。
+因为 ``file.read()`` 在文件很大的情况下，可能会出现读取异常。
+
+其实还有一种更简单的方法，利用 HTML 的 ``img`` 元素。
+
+.. code-block:: python
+ 
+ print 'Content-Type: text/html\n'
+
+ print "<html><body><img src = 'http://<servername>/beauty.png' alt='beautiful girl' /></body></html>"
 
 传递参数
 --------
@@ -114,7 +152,7 @@ Perl 脚本通过 ``${n}`` (n=1,2,3,...) 获取参数。
 
 .. code-block:: python
  
- print 'Location: hello_world.html' # 相对路径或者访问 hello_world.html 的 url
+ print 'Location: hello_world.html' # 等价于 print 'http://<servername>/cgi-bin/hello_world.html'
 
 返回错误响应
 ------------
@@ -139,35 +177,20 @@ e.g: ``print 'status: 204 No Response\n``
 
    .. code-block:: html
 
+    <IfModule alias_module>
+        ScriptAlias /cgi-bin/ "F:/my_cgi_bin/"
+    </IfModule>
+
     <Directory "F:/my_cgi_bin">
-        SetHandler cgi-script
+        SetHandler cgi-script # AddHandler cgi-script .py
         Options ExecCGI
     </Directory>
 
    将 `hello_world.py` 放在目录 ``F:/my_cgi_bin/`` 下。
 
-   等价于：
-
-   .. code-block:: html
-
-    <IfModule alias_module>
-        ScriptAlias /cgi-bin/ "F:/my_cgi_bin/"
-    </IfModule>
-
    如果要求 ``.py`` 文件才是 cgi 脚本，可以这样：
    
-   .. code-block:: html
-
-    <IfModule mime_module>
-    <Directory "F:/my_cgi_bin">
-        AddHandler cgi-script py
-        Options ExecCGI
-    </Directory>
-    </IfModule>
-
-    或者：
-
-    .. code-block:: html
+  .. code-block:: html
 
      <LoctionMatch "/.py$">
          SetHandler cgi-script
