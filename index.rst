@@ -15,5 +15,4 @@
    cplusplus_binary_file_io
    bat
    qa
-   apache/index
    symlinks
